@@ -234,3 +234,236 @@ elif module == "Polyether Designer":
             st.error("Target OH too high for this starter.")
 
         st.markdown('</div>', unsafe_allow_html=True)
+
+# ==========================================================
+# PU PREPOLYMER FORMULATION MODULE
+# ==========================================================
+
+elif module == "PU Prepolymer":
+
+    st.header("PU Prepolymer Formulation")
+
+    # ------------------------------------------------------
+    # ISOCYANATE LIBRARY
+    # ------------------------------------------------------
+
+    isocyanate_library = {
+        "MDI":  {"mw":250.25, "nco":2},
+        "TDI":  {"mw":174.16, "nco":2},
+        "IPDI": {"mw":222.30, "nco":2},
+    }
+
+    # ------------------------------------------------------
+    # INPUT SECTION
+    # ------------------------------------------------------
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        iso_type = st.selectbox(
+            "Select Isocyanate",
+            list(isocyanate_library.keys())
+        )
+
+        iso_mass = st.number_input(
+            "Isocyanate Mass (g)",
+            min_value=0.0,
+            value=100.0,
+            step=10.0
+        )
+
+    with col2:
+        poly_mass = st.number_input(
+            "Polyol Mass (g)",
+            min_value=0.0,
+            value=300.0,
+            step=10.0
+        )
+
+        poly_OH = st.number_input(
+            "Polyol OH Value (mg KOH/g)",
+            min_value=0.0,
+            value=200.0
+        )
+
+        poly_func = st.number_input(
+            "Polyol Functionality",
+            min_value=1.0,
+            value=2.5,
+            step=0.1
+        )
+
+    # ------------------------------------------------------
+    # CALCULATION
+    # ------------------------------------------------------
+
+    if st.button("Calculate Prepolymer"):
+
+        iso_data = isocyanate_library[iso_type]
+
+        MW_iso = iso_data["mw"]
+        f_nco = iso_data["nco"]
+
+        # ---- NCO equivalents ----
+        moles_iso = iso_mass / MW_iso
+        total_nco_eq = moles_iso * f_nco
+
+        # ---- Polyol OH equivalents ----
+        total_oh_eq = (poly_OH * poly_mass) / 56100
+
+        residual_nco_eq = total_nco_eq - total_oh_eq
+
+        total_mass = iso_mass + poly_mass
+
+        st.subheader("Results")
+
+        if residual_nco_eq > 0:
+
+            percent_nco = (residual_nco_eq * 42 / total_mass) * 100
+            eq_weight = total_mass / residual_nco_eq
+
+            # Polyol molecular weight estimate
+            EW_poly = 56100 / poly_OH
+            Mn_poly = poly_func * EW_poly
+
+            st.success("Prepolymer Successfully Calculated")
+
+            colA, colB, colC = st.columns(3)
+
+            colA.metric("Residual NCO (eq)", f"{residual_nco_eq:.3f}")
+            colB.metric("%NCO", f"{percent_nco:.2f}")
+            colC.metric("Eq. Weight", f"{eq_weight:.2f}")
+
+            st.markdown("---")
+
+            st.write("### Polyol Properties")
+            st.write("Estimated Polyol Mn:", round(Mn_poly,2))
+            st.write("Polyol Equivalent Weight:", round(EW_poly,2))
+
+        elif residual_nco_eq == 0:
+            st.warning("System is exactly NCO/OH balanced (Index = 1.00).")
+
+        else:
+            st.error("System is OH terminated (Excess Polyol). Increase Isocyanate.")
+
+# ==========================================================
+# REVERSE POLYESTER DESIGN (OH + ACID VALUE + MASS)
+# ==========================================================
+
+elif module == "Reverse Polyester Advanced":
+
+    st.header("Reverse Polyester Designer (OH + AV Controlled)")
+
+    # ------------------------------------------------------
+    # INPUTS
+    # ------------------------------------------------------
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        target_OH = st.number_input("Target OH (mg KOH/g)", value=200.0)
+        target_AV = st.number_input("Target Acid Value (mg KOH/g)", value=5.0)
+        total_mass = st.number_input("Total Final Mass (g)", value=1000.0)
+
+    with col2:
+        st.subheader("Select Acids")
+        acids = st.multiselect(
+            "Acids",
+            [k for k in polyester_library if polyester_library[k]["type"]=="acid"]
+        )
+
+        st.subheader("Select Glycols")
+        glycols = st.multiselect(
+            "Glycols",
+            [k for k in polyester_library if polyester_library[k]["type"]=="glycol"]
+        )
+
+    # ------------------------------------------------------
+    # GLYCOL RATIOS
+    # ------------------------------------------------------
+
+    glycol_ratios = {}
+    ratio_sum = 0
+
+    for glycol in glycols:
+        r = st.number_input(f"{glycol} Mol Ratio", value=1.0)
+        glycol_ratios[glycol] = r
+        ratio_sum += r
+
+    if st.button("Calculate Reverse Polyester"):
+
+        if ratio_sum == 0 or total_mass == 0:
+            st.error("Check inputs.")
+            st.stop()
+
+        # --------------------------------------------------
+        # CALCULATE REQUIRED EQUIVALENTS
+        # --------------------------------------------------
+
+        residual_acid_eq = (target_AV * total_mass) / 56100
+        total_oh_minus_acid_eq = (target_OH * total_mass) / 56100
+
+        # Let total acid equivalents = A
+        # Let total OH equivalents = G
+
+        # From OH equation:
+        # G - residual_acid_eq = total_oh_minus_acid_eq
+        total_oh_eq = total_oh_minus_acid_eq + residual_acid_eq
+
+        # From AV equation:
+        total_acid_eq = residual_acid_eq + (total_oh_eq - total_oh_minus_acid_eq)
+
+        # Actually total_acid_eq = total_oh_eq - total_oh_minus_acid_eq
+        total_acid_eq = total_oh_eq - total_oh_minus_acid_eq
+
+        # --------------------------------------------------
+        # DISTRIBUTE ACID EQUVALENTS EQUALLY
+        # --------------------------------------------------
+
+        acid_results = {}
+        total_acid_mass = 0
+        acid_per_component = total_acid_eq / len(acids) if acids else 0
+
+        for acid in acids:
+            data = polyester_library[acid]
+            mol = acid_per_component / data["func"]
+            mass = mol * data["mw"]
+            acid_results[acid] = mass
+            total_acid_mass += mass
+
+        # --------------------------------------------------
+        # DISTRIBUTE GLYCOL EQUVALENTS VIA RATIO
+        # --------------------------------------------------
+
+        glycol_results = {}
+        total_glycol_mass = 0
+
+        for glycol in glycols:
+            data = polyester_library[glycol]
+            mol_fraction = glycol_ratios[glycol] / ratio_sum
+            eq = total_oh_eq * mol_fraction
+            mol = eq / data["func"]
+            mass = mol * data["mw"]
+            glycol_results[glycol] = mass
+            total_glycol_mass += mass
+
+        # --------------------------------------------------
+        # DISPLAY RESULTS
+        # --------------------------------------------------
+
+        st.success("Reverse Design Complete")
+
+        st.subheader("Required Acid Masses")
+        for k,v in acid_results.items():
+            st.write(k, ":", round(v,2), "g")
+
+        st.subheader("Required Glycol Masses")
+        for k,v in glycol_results.items():
+            st.write(k, ":", round(v,2), "g")
+
+        st.markdown("---")
+
+        final_mass_check = total_acid_mass + total_glycol_mass
+
+        st.write("Calculated Batch Mass:", round(final_mass_check,2))
+        st.write("Target Batch Mass:", total_mass)
