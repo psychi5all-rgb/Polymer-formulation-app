@@ -350,7 +350,7 @@ elif module == "PU Prepolymer":
 # REVERSE POLYESTER DESIGN (OH + ACID VALUE + MASS)
 # ==========================================================
 
-elif module == "Reverse Polyester Advanced":
+elif module == "Reverse Polyester":
 
     st.header("Reverse Polyester Designer (OH + AV Controlled)")
 
