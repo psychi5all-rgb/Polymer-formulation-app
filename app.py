@@ -345,75 +345,67 @@ elif module == "PU Prepolymer":
 
         else:
             st.error("System is OH terminated (Excess Polyol). Increase Isocyanate.")
+
+#revese polyester##
 elif module == "Reverse Polyester":
 
     st.markdown('<div class="title-style">Reverse Polyester Designer</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle-style">Target OH + Target Acid Value Control</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle-style">Target OH Controlled Formulation</div>', unsafe_allow_html=True)
 
     with st.container():
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
         # --------------------------------------------------
-        # TARGET INPUTS
+        # TARGET OH INPUT
         # --------------------------------------------------
 
-        colA, colB, colC = st.columns(3)
-
-        with colA:
-            target_OH = st.number_input("Target OH (mg KOH/g)", value=200.0)
-
-        with colB:
-            target_AV = st.number_input("Target Acid Value", value=5.0)
-
-        with colC:
-            total_mass_target = st.number_input("Final Batch Mass (g)", value=1000.0)
+        target_OH = st.number_input("Target OH (mg KOH/g)", value=200.0)
 
         st.markdown("---")
 
         # --------------------------------------------------
-        # ACID SECTION
+        # ACIDS (Fixed Mass Input)
         # --------------------------------------------------
 
-        st.subheader("Acids")
+        st.subheader("Acids (Fixed Mass)")
 
         num_acids = st.slider("Number of Acids", 1, 3, 1)
 
-        acid_list = []
-        total_acid_mass_fixed = 0
-        total_water = 0
+        total_acid_mass = 0
         total_acid_eq = 0
+        total_water = 0
 
         for i in range(num_acids):
             col1, col2 = st.columns(2)
+
             with col1:
                 acid = st.selectbox(
                     f"Acid {i+1}",
                     [k for k in polyester_library if polyester_library[k]["type"]=="acid"],
-                    key=f"acid_select_{i}"
+                    key=f"rev_acid_sel_{i}"
                 )
+
             with col2:
                 mass = st.number_input(
                     f"{acid} Mass (g)",
                     value=100.0,
-                    key=f"acid_mass_{i}"
+                    key=f"rev_acid_mass_{i}"
                 )
 
             data = polyester_library[acid]
             mol = mass / data["mw"]
 
-            total_acid_mass_fixed += mass
+            total_acid_mass += mass
             total_acid_eq += mol * data["func"]
             total_water += mol * data["water"] * 18
-
-            acid_list.append(acid)
 
         st.markdown("---")
 
         # --------------------------------------------------
-        # GLYCOL SECTION
+        # GLYCOLS (Ratio Input)
         # --------------------------------------------------
 
-        st.subheader("Glycols")
+        st.subheader("Glycols (Mol Ratio)")
 
         num_glycols = st.slider("Number of Glycols", 1, 4, 1)
 
@@ -422,42 +414,36 @@ elif module == "Reverse Polyester":
 
         for i in range(num_glycols):
             col1, col2 = st.columns(2)
+
             with col1:
                 glycol = st.selectbox(
                     f"Glycol {i+1}",
                     [k for k in polyester_library if polyester_library[k]["type"]=="glycol"],
-                    key=f"glycol_select_{i}"
+                    key=f"rev_glycol_sel_{i}"
                 )
+
             with col2:
                 ratio = st.number_input(
                     f"{glycol} Mol Ratio",
                     value=1.0,
-                    key=f"glycol_ratio_{i}"
+                    key=f"rev_glycol_ratio_{i}"
                 )
 
             glycol_ratios[glycol] = ratio
             ratio_sum += ratio
 
         # --------------------------------------------------
-        # CALCULATION
+        # SOLVER
         # --------------------------------------------------
 
-        if st.button("Calculate Reverse Polyester"):
+        if st.button("Calculate Required Glycols"):
 
             if ratio_sum == 0:
                 st.error("Glycol ratio cannot be zero.")
                 st.stop()
 
-            # Required residual acid equivalents
-            residual_acid_eq_target = (target_AV * total_mass_target) / 56100
+            # Solve for glycol scaling
 
-            # Required net OH difference
-            net_oh_minus_acid = (target_OH * total_mass_target) / 56100
-
-            # Required total OH equivalents
-            total_required_oh_eq = net_oh_minus_acid + residual_acid_eq_target
-
-            # Solver to scale glycols
             def compute(scale):
                 total_oh_eq = 0
                 total_glycol_mass = 0
@@ -467,6 +453,7 @@ elif module == "Reverse Polyester":
                 for name, ratio in glycol_ratios.items():
                     mol = scale * (ratio / ratio_sum)
                     data = polyester_library[name]
+
                     total_oh_eq += mol * data["func"]
                     total_glycol_mass += mol * data["mw"]
 
@@ -474,24 +461,21 @@ elif module == "Reverse Polyester":
                         branch_moles += mol
                         branch_func = data["func"]
 
-                final_mass = total_acid_mass_fixed + total_glycol_mass - total_water
+                final_mass = total_acid_mass + total_glycol_mass - total_water
+                residual = total_oh_eq - total_acid_eq
 
-                residual_oh_eq = total_oh_eq - total_acid_eq
-
-                if residual_oh_eq <= 0:
+                if residual <= 0:
                     return -1, 0, 0, 0
 
-                OH = (56100 * residual_oh_eq) / final_mass
-                AV = (56100 * (total_acid_eq - residual_oh_eq)) / final_mass
+                OH = (56100 * residual) / final_mass
+                return OH, branch_moles, final_mass, total_glycol_mass
 
-                return OH, AV, branch_moles, final_mass
-
-            # Bisection
+            # Bisection method
             low, high = 1e-6, 1000
 
             for _ in range(100):
                 mid = (low + high) / 2
-                OH_val, AV_val, branch_moles, final_mass = compute(mid)
+                OH_val, branch_moles, final_mass, total_glycol_mass = compute(mid)
 
                 if OH_val < 0:
                     low = mid
@@ -505,31 +489,44 @@ elif module == "Reverse Polyester":
                 else:
                     high = mid
 
-            OH_val, AV_val, branch_moles, final_mass = compute(mid)
+            OH_val, branch_moles, final_mass, total_glycol_mass = compute(mid)
+
+            if OH_val <= 0:
+                st.error("Acid Terminated Polyester — Increase Glycol.")
+                st.stop()
 
             # Chang functionality
-            EW = 56100 / OH_val if OH_val > 0 else 0
+            EW = 56100 / OH_val
+
             if branch_moles > 0:
                 Y = final_mass / branch_moles
-                f = 2 / (1 - (1)*(EW / Y))
+                f = 2 / (1 - (1) * (EW / Y))
             else:
                 Y = None
                 f = 2
 
-            Mn = f * EW if EW > 0 else 0
+            Mn = f * EW
 
             # --------------------------------------------------
-            # OUTPUT STYLING
+            # OUTPUT
             # --------------------------------------------------
+
+            st.success("Calculation Complete")
 
             st.markdown('<div class="result-box">', unsafe_allow_html=True)
 
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("OH", f"{OH_val:.2f}")
-            c2.metric("Acid Value", f"{AV_val:.2f}")
-            c3.metric("Functionality", f"{f:.3f}")
-            c4.metric("Mn", f"{Mn:.2f}")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Achieved OH", f"{OH_val:.2f}")
+            c2.metric("Functionality", f"{f:.3f}")
+            c3.metric("Mn", f"{Mn:.2f}")
 
             st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("### Required Glycol Masses")
+
+            for name, ratio in glycol_ratios.items():
+                mol = mid * (ratio / ratio_sum)
+                mass = mol * polyester_library[name]["mw"]
+                st.write(f"{name}: {mass:.2f} g")
 
         st.markdown('</div>', unsafe_allow_html=True)
