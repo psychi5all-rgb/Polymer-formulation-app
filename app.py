@@ -1,13 +1,13 @@
 import streamlit as st
 
 # ==========================================================
-# PAGE CONFIG
+# PAGE CONFIG 🧪
 # ==========================================================
 
 st.set_page_config(
     page_title="Polymer Formulation Suite",
     layout="wide",
-    page_icon="🧪"
+    page_icon=""
 )
 
 # ==========================================================
@@ -509,6 +509,7 @@ elif module == "Reverse Polyester":
                 f = 2
 
             Mn = f * EW
+           
 
             # --------------------------------------------------
             # OUTPUT
@@ -705,6 +706,94 @@ elif module == "Industrial Polyester Designer":
                 f=2
 
             Mn = f*EW
+             # --------------------------------------------------
+            # GEL POINT (Flory-Stockmayer)
+            # --------------------------------------------------
+
+            if branch_mol > 0:
+
+                p_critical = 1 / ((B["func"] - 1) * (total_acid_eq / total_oh_eq))
+
+                st.markdown("### Gel Point Prediction")
+
+                col1, col2 = st.columns(2)
+
+                col1.metric("Critical Conversion (pₙ)", f"{p_critical:.3f}")
+
+                if p_critical < 1:
+                        col2.warning("Network formation possible")
+                else:
+                        col2.success("Safe from gelation")
+
+            # --------------------------------------------------
+            # AUTO r SOLVER FOR TARGET OH
+            # --------------------------------------------------
+
+            st.markdown("### Automatic r Solver")
+
+            target_OH = st.number_input("Target OH for solver", value=OH)
+
+            def solve_r(target_OH):
+
+                r_low = 0.8
+                r_high = 1.2
+
+                for _ in range(50):
+
+                    r_mid = (r_low + r_high) / 2
+
+                    total_oh_eq = r_mid * total_acid_eq
+
+                    residual = total_oh_eq - total_acid_eq
+
+                    OH_mid = (56100 * residual) / final_mass
+
+                    if OH_mid < target_OH:
+                        r_low = r_mid
+                    else:
+                        r_high = r_mid
+
+                return r_mid
+
+            if st.button("Solve r"):
+
+                solved_r = solve_r(target_OH)
+
+                st.metric("Required r", f"{solved_r:.3f}")
+
+            # --------------------------------------------------
+            # OH vs r GRAPH
+            # --------------------------------------------------
+
+            st.markdown("### OH vs r Trend")
+
+            r_values = np.linspace(0.8,1.2,50)
+
+            OH_values = []
+
+            for r in r_values:
+
+                total_oh_eq = r * total_acid_eq
+                residual = total_oh_eq - total_acid_eq
+
+                if residual <= 0:
+                    OH_values.append(0)
+                else:
+                    OH_values.append((56100*residual)/final_mass)
+
+            df = pd.DataFrame({
+                "r": r_values,
+                "OH": OH_values
+            })
+
+            fig, ax = plt.subplots()
+
+            ax.plot(df["r"],df["OH"])
+            ax.set_xlabel("r (OH/COOH)")
+            ax.set_ylabel("OH value")
+            ax.set_title("OH vs Stoichiometric Ratio")
+
+            st.pyplot(fig)
 
             st.markdown('<div class="result-box">', unsafe_allow_html=True)
 
