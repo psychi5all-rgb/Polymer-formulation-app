@@ -548,7 +548,7 @@ elif module == "Industrial Polyester Designer":
         col1,col2,col3 = st.columns(3)
 
         with col1:
-            r_ratio = st.slider("r (OH / COOH)",0.80,1.20,1.08,0.01)
+            r_ratio = st.slider("r (OH / COOH)",0.80,2.20,1.08,0.01)
 
         with col2:
             branch_percent = st.slider("Brancher % (mol)",0.0,0.20,0.05,0.01)
