@@ -72,7 +72,7 @@ module = st.sidebar.radio(
         "Polyether Designer",
         "PU Prepolymer",
         "Industrial Polyester Designer",
-        "Simulator",
+        "Simulator"
     ]
 )
 
