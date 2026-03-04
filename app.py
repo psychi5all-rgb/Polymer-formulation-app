@@ -715,3 +715,5 @@ elif module == "Industrial Polyester Designer":
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
+
+
