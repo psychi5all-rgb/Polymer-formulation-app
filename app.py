@@ -89,6 +89,7 @@ polyester_library = {
     "1,3-Propanediol": {"mw":76.09,"func":2,"type":"glycol"},
     "1,6-Hexanediol": {"mw":118.17,"func":2,"type":"glycol"},
     "Propylene Glycol": {"mw":76.09,"func":2,"type":"glycol"},
+    "MP Diol": {"mw":90.12,"func":2,"type":"glycol"},
     "Glycerine": {"mw":92.09,"func":3,"type":"glycol"},
     "TMP": {"mw":134.17,"func":3,"type":"glycol"},
 }
@@ -102,6 +103,7 @@ polyether_starters = {
     "Hexanediol": {"mw":118.17,"func":2},
     "Castor Oil": {"mw":933,"func":3},
     "1,3-Propanediol": {"mw":76.09,"func":2},
+    "MP diol": {"mw":90.12,"func":2},
 }
 
 MW_EO = 44
