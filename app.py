@@ -68,6 +68,7 @@ module = st.sidebar.radio(
         "Reverse Polyester",
         "Polyether Designer",
         "PU Prepolymer"
+        "Industrial Polyester Designer"
     ]
 )
 
@@ -528,5 +529,189 @@ elif module == "Reverse Polyester":
                 mol = mid * (ratio / ratio_sum)
                 mass = mol * polyester_library[name]["mw"]
                 st.write(f"{name}: {mass:.2f} g")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+elif module == "Industrial Polyester Designer":
+
+    st.markdown('<div class="title-style">Industrial Polyester Designer</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle-style">Dynamic Polyester Formulation Tool</div>', unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+        # --------------------------------------------------
+        # GLOBAL CONTROLS
+        # --------------------------------------------------
+
+        col1,col2,col3 = st.columns(3)
+
+        with col1:
+            r_ratio = st.slider("r (OH / COOH)",0.80,1.20,1.08,0.01)
+
+        with col2:
+            branch_percent = st.slider("Brancher % (mol)",0.0,0.20,0.05,0.01)
+
+        with col3:
+            acid_moles = st.slider("Total Acid Moles",1.0,50.0,10.0,1.0)
+
+        st.markdown("---")
+
+        # --------------------------------------------------
+        # ACID SELECTION
+        # --------------------------------------------------
+
+        acid_options = [k for k in polyester_library if polyester_library[k]["type"]=="acid"]
+
+        num_acids = st.slider("Number of Acids",1,3,2)
+
+        acids=[]
+        acid_ratios=[]
+        ratio_sum=0
+
+        for i in range(num_acids):
+
+            colA,colB = st.columns(2)
+
+            with colA:
+                acid = st.selectbox(
+                    f"Acid {i+1}",
+                    acid_options,
+                    key=f"acid_ind_{i}"
+                )
+
+            with colB:
+                ratio = st.slider(
+                    f"{acid} Ratio",
+                    0.0,1.0,
+                    1/num_acids,
+                    0.01,
+                    key=f"acid_ratio_ind_{i}"
+                )
+
+            acids.append(acid)
+            acid_ratios.append(ratio)
+            ratio_sum+=ratio
+
+        st.markdown("---")
+
+        # --------------------------------------------------
+        # GLYCOL SELECTION
+        # --------------------------------------------------
+
+        glycol_options = [k for k in polyester_library if polyester_library[k]["type"]=="glycol"]
+
+        num_glycols = st.slider("Number of Glycols",1,4,2)
+
+        glycols=[]
+        glycol_ratios=[]
+        glycol_sum=0
+
+        for i in range(num_glycols):
+
+            colA,colB = st.columns(2)
+
+            with colA:
+                glycol = st.selectbox(
+                    f"Glycol {i+1}",
+                    glycol_options,
+                    key=f"glycol_ind_{i}"
+                )
+
+            with colB:
+                ratio = st.slider(
+                    f"{glycol} Ratio",
+                    0.0,1.0,
+                    1/num_glycols,
+                    0.01,
+                    key=f"glycol_ratio_ind_{i}"
+                )
+
+            glycols.append(glycol)
+            glycol_ratios.append(ratio)
+            glycol_sum+=ratio
+
+        st.markdown("---")
+
+        brancher = st.selectbox("Brancher",["Glycerine","TMP"])
+
+        B = polyester_library[brancher]
+
+        # --------------------------------------------------
+        # CALCULATION
+        # --------------------------------------------------
+
+        total_acid_eq=0
+        total_oh_eq=0
+        total_mass=0
+        total_water=0
+
+        branch_mol = acid_moles*branch_percent
+        branch_oh = branch_mol*B["func"]
+
+        for i,acid in enumerate(acids):
+
+            A = polyester_library[acid]
+
+            mol = acid_moles*(acid_ratios[i]/ratio_sum)
+
+            total_acid_eq += mol*A["func"]
+
+            total_mass += mol*A["mw"]
+
+            total_water += mol*A["water"]*18
+
+        total_oh_eq = r_ratio*total_acid_eq
+
+        remaining_oh = total_oh_eq-branch_oh
+
+        for i,glycol in enumerate(glycols):
+
+            G = polyester_library[glycol]
+
+            mol = (remaining_oh*(glycol_ratios[i]/glycol_sum))/G["func"]
+
+            total_mass += mol*G["mw"]
+
+        total_mass += branch_mol*B["mw"]
+
+        final_mass = total_mass-total_water
+
+        residual_oh = total_oh_eq-total_acid_eq
+
+        if residual_oh <= 0:
+            st.warning("Acid terminated polyester")
+
+        else:
+
+            OH = (56100*residual_oh)/final_mass
+
+            EW = 56100/OH
+
+            Y = final_mass/branch_mol if branch_mol>0 else None
+
+            if branch_mol>0:
+
+                denom = 1-(B["func"]-2)*(EW/Y)
+
+                if abs(denom)<1e-6:
+                    f = float("inf")
+                else:
+                    f = 2/denom
+            else:
+                f=2
+
+            Mn = f*EW
+
+            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+
+            c1,c2,c3,c4 = st.columns(4)
+
+            c1.metric("OH",f"{OH:.2f}")
+            c2.metric("Functionality",f"{f:.3f}")
+            c3.metric("Mn",f"{Mn:.2f}")
+            c4.metric("Final Mass",f"{final_mass:.1f}")
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
