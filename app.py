@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 st.set_page_config(
     page_title="Polymer Formulation Suite",
     layout="wide",
-    page_icon=""
+    page_icon="🧪"
 )
 
 # ==========================================================
@@ -71,7 +71,8 @@ module = st.sidebar.radio(
         "Reverse Polyester",
         "Polyether Designer",
         "PU Prepolymer",
-        "Industrial Polyester Designer"
+        "Industrial Polyester Designer",
+        "Simulator",
     ]
 )
 
@@ -709,7 +710,10 @@ elif module == "Industrial Polyester Designer":
                 f=2
 
             Mn = f*EW
-             # --------------------------------------------------
+
+##Industrial Polyester Designer##
+elif module == "Simulator":
+            # --------------------------------------------------
             # GEL POINT (Flory-Stockmayer)
             # --------------------------------------------------
 
