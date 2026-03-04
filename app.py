@@ -26,7 +26,7 @@ st.markdown("""
 
     .section-card {
         background-color: blue;
-        padding: 25px;
+        padding: 5px;
         border-radius: 12px;
         box-shadow: 0px 3px 12px rgba(0,0,0,0.08);
         margin-bottom: 20px;
