@@ -36,20 +36,20 @@ st.markdown("""
     }
 
     .title-style {
-        font-size: 14px;
-        font-weight: 100;
+        font-size: 25px;
+        font-weight: 600;
         color: #1f2937;
     }
 
     .subtitle-style {
-        font-size: 5px;
+        font-size: 20px;
         color: #6b7280;
-        margin-bottom: 5px;
+        margin-bottom: 10px;
     }
 
     .result-box {
         background-color: #eef2ff;
-        padding: 6px;
+        padding: 20px;
         border-radius: 1px;
         margin-top: 1px;
     }
