@@ -36,22 +36,22 @@ st.markdown("""
     }
 
     .title-style {
-        font-size: 26px;
-        font-weight: 600;
+        font-size: 14px;
+        font-weight: 100;
         color: #1f2937;
     }
 
     .subtitle-style {
-        font-size: 16px;
+        font-size: 5px;
         color: #6b7280;
-        margin-bottom: 20px;
+        margin-bottom: 5px;
     }
 
     .result-box {
         background-color: #eef2ff;
-        padding: 20px;
-        border-radius: 10px;
-        margin-top: 15px;
+        padding: 6px;
+        border-radius: 1px;
+        margin-top: 1px;
     }
 
 </style>
