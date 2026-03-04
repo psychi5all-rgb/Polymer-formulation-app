@@ -767,40 +767,7 @@ elif module == "Industrial Polyester Designer":
 
                 st.metric("Required r", f"{solved_r:.3f}")
 
-            # --------------------------------------------------
-            # OH vs r GRAPH
-            # --------------------------------------------------
-
-            st.markdown("### OH vs r Trend")
-
-            r_values = np.linspace(0.8,1.2,50)
-
-            OH_values = []
-
-            for r in r_values:
-
-                total_oh_eq = r * total_acid_eq
-                residual = total_oh_eq - total_acid_eq
-
-                if residual <= 0:
-                    OH_values.append(0)
-                else:
-                    OH_values.append((56100*residual)/final_mass)
-
-            df = pd.DataFrame({
-                "r": r_values,
-                "OH": OH_values
-            })
-
-            fig, ax = plt.subplots()
-
-            ax.plot(df["r"],df["OH"])
-            ax.set_xlabel("r (OH/COOH)")
-            ax.set_ylabel("OH value")
-            ax.set_title("OH vs Stoichiometric Ratio")
-
-            st.pyplot(fig)
-
+            
             st.markdown('<div class="result-box">', unsafe_allow_html=True)
 
             c1,c2,c3,c4 = st.columns(4)
