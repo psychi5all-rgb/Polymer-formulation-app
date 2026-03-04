@@ -67,7 +67,7 @@ module = st.sidebar.radio(
         "Forward Polyester",
         "Reverse Polyester",
         "Polyether Designer",
-        "PU Prepolymer"
+        "PU Prepolymer",
         "Industrial Polyester Designer"
     ]
 )
