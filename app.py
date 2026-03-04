@@ -532,6 +532,7 @@ elif module == "Reverse Polyester":
 
         st.markdown('</div>', unsafe_allow_html=True)
 
+##Industrial Polyester Designer##
 elif module == "Industrial Polyester Designer":
 
     st.markdown('<div class="title-style">Industrial Polyester Designer</div>', unsafe_allow_html=True)
