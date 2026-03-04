@@ -711,8 +711,7 @@ elif module == "Industrial Polyester Designer":
 
             Mn = f*EW
 
-##Industrial Polyester Designer##
-elif module == "Simulator":
+
             # --------------------------------------------------
             # GEL POINT (Flory-Stockmayer)
             # --------------------------------------------------
