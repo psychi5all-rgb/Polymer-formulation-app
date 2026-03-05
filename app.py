@@ -73,7 +73,8 @@ module = st.sidebar.radio(
         "Polyether Designer",
         "PU Prepolymer",
         "Industrial Polyester Designer",
-        "Polyester Synthesis Simulation"
+        "Polyester Synthesis Simulation",
+        "Polyester Reactor Simulator",
     ]
 )
 
@@ -835,5 +836,172 @@ elif module == "Polyester Synthesis Simulation":
 
     fig4 = px.line(df, x="Conversion", y="Water")
     st.plotly_chart(fig4, use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+elif module == "Polyester Reactor Simulator":
+
+    st.markdown('<div class="title-style">Polyester Reactor Simulator</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle-style">Multi-Component Step-Growth Polymerization</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+    input_mode = st.radio("Input Mode",["Mass (g)","Moles"])
+
+    acid_options = [k for k in polyester_library if polyester_library[k]["type"]=="acid"]
+    glycol_options = [k for k in polyester_library if polyester_library[k]["type"]=="glycol"]
+
+    # --------------------------------------------------
+    # ACIDS
+    # --------------------------------------------------
+
+    st.subheader("Acids")
+
+    num_acids = st.slider("Number of acids",1,4,2)
+
+    acids=[]
+    acid_moles=[]
+    total_acid_eq=0
+    total_mass=0
+    total_water=0
+
+    for i in range(num_acids):
+
+        col1,col2 = st.columns(2)
+
+        with col1:
+            acid = st.selectbox(f"Acid {i+1}",acid_options,key=f"sim_acid{i}")
+
+        with col2:
+
+            if input_mode=="Mass (g)":
+                mass = st.number_input(f"{acid} mass (g)",value=100.0,key=f"acid_mass{i}")
+                mol = mass/polyester_library[acid]["mw"]
+            else:
+                mol = st.number_input(f"{acid} moles",value=1.0,key=f"acid_mol{i}")
+                mass = mol*polyester_library[acid]["mw"]
+
+        acids.append(acid)
+        acid_moles.append(mol)
+
+        total_mass += mass
+
+        total_acid_eq += mol*polyester_library[acid]["func"]
+
+        total_water += mol*polyester_library[acid]["water"]*18
+
+    # --------------------------------------------------
+    # GLYCOLS
+    # --------------------------------------------------
+
+    st.subheader("Glycols")
+
+    num_glycols = st.slider("Number of glycols",1,5,2)
+
+    glycols=[]
+    glycol_moles=[]
+    total_oh_eq=0
+
+    for i in range(num_glycols):
+
+        col1,col2 = st.columns(2)
+
+        with col1:
+            glycol = st.selectbox(f"Glycol {i+1}",glycol_options,key=f"sim_glycol{i}")
+
+        with col2:
+
+            if input_mode=="Mass (g)":
+                mass = st.number_input(f"{glycol} mass (g)",value=120.0,key=f"glycol_mass{i}")
+                mol = mass/polyester_library[glycol]["mw"]
+            else:
+                mol = st.number_input(f"{glycol} moles",value=1.0,key=f"glycol_mol{i}")
+                mass = mol*polyester_library[glycol]["mw"]
+
+        glycols.append(glycol)
+        glycol_moles.append(mol)
+
+        total_mass += mass
+
+        total_oh_eq += mol*polyester_library[glycol]["func"]
+
+    # --------------------------------------------------
+    # SIMULATION
+    # --------------------------------------------------
+
+    st.markdown("---")
+
+    st.subheader("Reaction Simulation")
+
+    p_values = np.linspace(0.01,0.99,100)
+
+    OH_values=[]
+    AV_values=[]
+    Mn_values=[]
+    water_curve=[]
+    viscosity_curve=[]
+
+    initial_mass = total_mass
+
+    for p in p_values:
+
+        reacted_eq = total_acid_eq*p
+
+        residual_acid = total_acid_eq-reacted_eq
+        residual_oh = total_oh_eq-reacted_eq
+
+        water = reacted_eq*18
+
+        final_mass = initial_mass-water
+
+        if residual_oh>0:
+            OH = (56100*residual_oh)/final_mass
+        else:
+            OH = 0
+
+        AV = (56100*residual_acid)/final_mass
+
+        DP = 1/(1-p)
+
+        Mn = DP*(initial_mass/(sum(acid_moles)+sum(glycol_moles)))
+
+        # viscosity estimate
+        viscosity = 1e-4*(Mn**0.7)
+
+        OH_values.append(OH)
+        AV_values.append(AV)
+        Mn_values.append(Mn)
+        water_curve.append(water)
+        viscosity_curve.append(viscosity)
+
+    df = pd.DataFrame({
+        "Conversion":p_values,
+        "OH":OH_values,
+        "Acid Value":AV_values,
+        "Mn":Mn_values,
+        "Water":water_curve,
+        "Viscosity":viscosity_curve
+    })
+
+    # --------------------------------------------------
+    # PLOTS
+    # --------------------------------------------------
+
+    st.subheader("Reaction Profiles")
+
+    fig1 = px.line(df,x="Conversion",y="OH")
+    st.plotly_chart(fig1,use_container_width=True)
+
+    fig2 = px.line(df,x="Conversion",y="Acid Value")
+    st.plotly_chart(fig2,use_container_width=True)
+
+    fig3 = px.line(df,x="Conversion",y="Mn")
+    st.plotly_chart(fig3,use_container_width=True)
+
+    fig4 = px.line(df,x="Conversion",y="Viscosity")
+    st.plotly_chart(fig4,use_container_width=True)
+
+    fig5 = px.line(df,x="Conversion",y="Water")
+    st.plotly_chart(fig5,use_container_width=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
