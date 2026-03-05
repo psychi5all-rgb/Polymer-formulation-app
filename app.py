@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 st.set_page_config(layout="wide")
 # ==========================================================
-# PAGE CONFIG 🧪
+# PAGE CONFIG 🧪 
 # ==========================================================
 
 st.set_page_config(
