@@ -72,7 +72,7 @@ module = st.sidebar.radio(
         "Polyether Designer",
         "PU Prepolymer",
         "Industrial Polyester Designer",
-        "Simulator"
+        "Polyester Synthesis Simulation"
     ]
 )
 
@@ -726,4 +726,113 @@ elif module == "Industrial Polyester Designer":
 
         st.markdown('</div>', unsafe_allow_html=True)
 
+elif module == "Polyester Synthesis Simulation":
 
+    st.markdown('<div class="title-style">Polyester Synthesis Simulation</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle-style">Reaction Progress Model</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+    # --------------------------------------
+    # INPUTS
+    # --------------------------------------
+
+    acid_options = [k for k in polyester_library if polyester_library[k]["type"]=="acid"]
+    glycol_options = [k for k in polyester_library if polyester_library[k]["type"]=="glycol"]
+
+    acid = st.selectbox("Acid", acid_options)
+    glycol = st.selectbox("Glycol", glycol_options)
+
+    acid_mass = st.number_input("Acid Mass (g)", value=100.0)
+    glycol_mass = st.number_input("Glycol Mass (g)", value=120.0)
+
+    # --------------------------------------
+    # MATERIAL DATA
+    # --------------------------------------
+
+    A = polyester_library[acid]
+    G = polyester_library[glycol]
+
+    mol_acid = acid_mass / A["mw"]
+    mol_glycol = glycol_mass / G["mw"]
+
+    acid_eq = mol_acid * A["func"]
+    oh_eq = mol_glycol * G["func"]
+
+    # --------------------------------------
+    # SIMULATION
+    # --------------------------------------
+
+    p_values = np.linspace(0.01,0.99,100)
+
+    OH_values = []
+    AV_values = []
+    Mn_values = []
+    water_values = []
+
+    initial_mass = acid_mass + glycol_mass
+
+    for p in p_values:
+
+        reacted_eq = acid_eq * p
+
+        residual_acid = acid_eq - reacted_eq
+        residual_oh = oh_eq - reacted_eq
+
+        water = reacted_eq * 18
+        final_mass = initial_mass - water
+
+        if residual_oh <= 0:
+            OH = 0
+        else:
+            OH = (56100 * residual_oh) / final_mass
+
+        AV = (56100 * residual_acid) / final_mass
+
+        if p < 1:
+            DP = 1 / (1 - p)
+        else:
+            DP = np.inf
+
+        Mn = DP * (initial_mass / (mol_acid + mol_glycol))
+
+        OH_values.append(OH)
+        AV_values.append(AV)
+        Mn_values.append(Mn)
+        water_values.append(water)
+
+    df = pd.DataFrame({
+        "Conversion": p_values,
+        "OH": OH_values,
+        "Acid Value": AV_values,
+        "Mn": Mn_values,
+        "Water": water_values
+    })
+
+    # --------------------------------------
+    # PLOTS
+    # --------------------------------------
+
+    import plotly.express as px
+
+    st.markdown("### OH vs Conversion")
+
+    fig1 = px.line(df, x="Conversion", y="OH")
+    st.plotly_chart(fig1, use_container_width=True)
+
+    st.markdown("### Acid Value vs Conversion")
+
+    fig2 = px.line(df, x="Conversion", y="Acid Value")
+    st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown("### Molecular Weight vs Conversion")
+
+    fig3 = px.line(df, x="Conversion", y="Mn")
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.markdown("### Water Evolution")
+
+    fig4 = px.line(df, x="Conversion", y="Water")
+    st.plotly_chart(fig4, use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
