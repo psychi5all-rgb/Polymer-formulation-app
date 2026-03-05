@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
 st.set_page_config(layout="wide")
 # ==========================================================
 # PAGE CONFIG 🧪 
@@ -813,7 +814,7 @@ elif module == "Polyester Synthesis Simulation":
     # PLOTS
     # --------------------------------------
 
-    import plotly.express as px
+    
 
     st.markdown("### OH vs Conversion")
 
